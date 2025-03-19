@@ -1,0 +1,79 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.integrate as integrate
+from collections import Counter
+import scipy.stats as stats
+import random
+
+def inverse_transform_exponential(U_list, lambda_param):
+    """
+    Performs Inverse Transform Sampling for an exponential distribution.
+
+    Parameters:
+    U_list (list or np.array): List of uniform random numbers in (0,1).
+    lambda_param (float): Rate parameter (lambda) of the exponential distribution.
+
+    Returns:
+    np.array: List of generated samples following Exp(lambda).
+    """
+    if any(u <= 0 or u >= 1 for u in U_list):
+        raise ValueError("All values in U_list must be in the range (0,1)")
+
+    # Apply the inverse CDF transformation
+    X_list = [-np.log(1 - u) / lambda_param for u in U_list]
+
+    return np.array(X_list)
+def generate_randogram(randomNums):
+    if len(randomNums) % 2 != 0:
+        randomNums = randomNums[:-1]  # Ensure even count
+    
+    # Convert to coordinate pairs
+    points = [(randomNums[i], randomNums[i + 1]) for i in range(0, len(randomNums), 2)]
+    
+    # Count occurrences of each coordinate
+    point_counts = Counter(points)
+    
+    # Extract unique points and their intensities
+    x_vals, y_vals, intensities = [], [], []
+    for (x, y), count in point_counts.items():
+        x_vals.append(x)
+        y_vals.append(y)
+        intensities.append(1-(1/(count + 1)))  # Normalize intensities better
+    
+    # Convert to numpy array
+    intensities = np.array(intensities)
+    
+    # Plot the randogram
+    plt.figure(figsize=(8, 8))
+    plt.scatter(x_vals, y_vals, c=intensities, cmap='gray', edgecolor='none')
+    plt.colorbar(label='Intensity')
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+    plt.title('Randogram')
+    plt.show()
+
+def plot_distribution(data, bins=10, title='Distribution Graph'):
+    """Plots a distribution graph for a given list of values without using seaborn."""
+    plt.figure(figsize=(8, 5))
+    plt.hist(data, bins=bins, color='blue', alpha=0.6, edgecolor='black')
+    
+    # Density line
+    data_range = np.linspace(min(data), max(data), 1000)
+    plt.xlabel('Values')
+    plt.ylabel('Frequency')
+    plt.title(title)
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.show()
+
+# Example usage:
+U_samples = np.random.uniform(0, 1, 255)  # Generate 10 uniform random numbers
+lambda_value = 2  # Set rate parameter lambda
+
+X_samples = inverse_transform_exponential(U_samples, lambda_value)
+print("Uniform samples:", U_samples)
+print("Exponential samples:", X_samples)
+generate_randogram(X_samples)
+plot_distribution(X_samples)
+
+for c in range (1,256):
+    print(random.randint(0,255))
