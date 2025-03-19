@@ -1,0 +1,156 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.integrate as integrate
+from collections import Counter
+import scipy.stats as stats
+
+def linearCongruentialMethod(Xo, m, a, c, randomNums, noOfRandomNums):
+ 
+    # Initialize the seed state
+    randomNums[0] = Xo
+ 
+    # Traverse to generate required
+    # numbers of random numbers
+    for i in range(1, noOfRandomNums):
+         
+        # Follow the linear congruential method
+        randomNums[i] = ((randomNums[i - 1] * a) + c) % m
+
+def xorshift8(value, a=3, b=5, c=4):
+    """
+    Performs the 8-bit XORShift operation on a single 8-bit integer.
+    Default shift coefficients are (3,5,4) for good randomness.
+    """
+    if not (0 <= value <= 255):
+        raise ValueError("Value must be an 8-bit integer (0-255)")
+    
+    value ^= (value << a) & 0xFF  # Left shift and XOR (ensure 8-bit wrap)
+    value ^= (value >> b)         # Right shift and XOR
+    value ^= (value << c) & 0xFF  # Left shift and XOR (ensure 8-bit wrap)
+    
+    return value & 0xFF  # Ensure result stays in 8-bit range
+
+def apply_xorshift_to_list(values, a=3, b=5, c=4):
+    """
+    Applies the 8-bit XORShift operation to a list of 8-bit integers.
+    """
+    return [xorshift8(v, a, b, c) for v in values]
+
+def generate_randogram(randomNums):
+    if len(randomNums) % 2 != 0:
+        randomNums = randomNums[:-1]  # Ensure even count
+    
+    # Convert to coordinate pairs
+    points = [(randomNums[i], randomNums[i + 1]) for i in range(0, len(randomNums), 2)]
+    
+    # Count occurrences of each coordinate
+    point_counts = Counter(points)
+    
+    # Extract unique points and their intensities
+    x_vals, y_vals, intensities = [], [], []
+    for (x, y), count in point_counts.items():
+        x_vals.append(x)
+        y_vals.append(y)
+        intensities.append(1-(1/(count + 1)))  # Normalize intensities better
+    
+    # Convert to numpy array
+    intensities = np.array(intensities)
+    
+    # Plot the randogram
+    plt.figure(figsize=(8, 8))
+    plt.scatter(x_vals, y_vals, c=intensities, cmap='gray', edgecolor='none')
+    plt.colorbar(label='Intensity')
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+    plt.title('Randogram')
+    plt.show()
+
+def plot_distribution(data, bins=10, title='Distribution Graph'):
+    """Plots a distribution graph for a given list of values without using seaborn."""
+    plt.figure(figsize=(8, 5))
+    plt.hist(data, bins=bins, color='blue', alpha=0.6, edgecolor='black')
+    
+    # Density line
+    data_range = np.linspace(min(data), max(data), 1000)
+    plt.xlabel('Values')
+    plt.ylabel('Frequency')
+    plt.title(title)
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.show()
+    
+
+def integration(randomNums):
+    """Computes the total integral area for a list of numbers."""
+    integratedRandomNums = []
+    def func(x):
+        return np.sin(x) + np.cos(4 * (x + 1/4))  # Define the function to integrate
+    
+    for i in randomNums:
+        total_area = (integrate.quad(func, 0, randomNums[i])[0]) + randomNums[i]
+        integratedRandomNums.append(int(round(total_area)))
+    return(integratedRandomNums)
+def inverse_transform_sampling_normal(mu, sigma, n_samples):
+    """
+    Generates random samples from a normal distribution using Inverse Transform Sampling.
+
+    Parameters:
+    mu (float): Mean of the normal distribution.
+    sigma (float): Standard deviation of the normal distribution.
+    n_samples (int): Number of samples to generate.
+
+    Returns:
+    np.array: Array of random samples from N(mu, sigma).
+    """
+    # Step 1: Generate uniform random numbers in (0,1)
+    U = np.random.uniform(0, 1, n_samples)
+
+    # Step 2: Apply the inverse CDF (percent-point function, PPF)
+    X = stats.norm.ppf(U, loc=mu, scale=sigma)
+
+    return X
+    
+
+
+# Driver Code
+if __name__ == '__main__':
+     
+    # Seed value
+    Xo = 42
+     
+    # Modulus parameter
+    m = 256   
+     
+    # Multiplier term
+    a = 165
+        
+    # Increment term
+    c = 101
+ 
+    # Number of Random numbers
+    # to be generated
+    noOfRandomNums = 260
+
+    # To store random numbers
+    randomNums = [0] * (noOfRandomNums)
+ 
+    # Function Call
+    linearCongruentialMethod(Xo, m, a, c,randomNums, noOfRandomNums)
+ 
+    # Print the generated random numbers
+    for i in randomNums:
+        print(i, end = " ")
+    
+    xorShiftRandomNums = apply_xorshift_to_list(randomNums)
+    print("XORShifted:", xorShiftRandomNums)
+
+    transformationNums = inverse_transform_sampling_normal(0.5, 1, 256)
+
+   # generate_randogram(randomNums)
+   # plot_distribution(randomNums)
+    generate_randogram(xorShiftRandomNums)
+    #plot_distribution(xorShiftRandomNums)
+    plot_distribution(transformationNums)
+
+  #  integratedRandomNums = integration(randomNums)
+   # generate_randogram(integratedRandomNums)
+
