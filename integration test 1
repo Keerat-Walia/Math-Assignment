@@ -1,0 +1,222 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.integrate as integrate
+from collections import Counter
+import scipy.stats as stats
+
+def linearCongruentialMethod(Xo, m, a, c, randomNums, noOfRandomNums):
+ 
+    # Initialize the seed state
+    randomNums[0] = Xo
+ 
+    # Traverse to generate required
+    # numbers of random numbers
+    for i in range(1, noOfRandomNums):
+         
+        # Follow the linear congruential method
+        randomNums[i] = ((randomNums[i - 1] * a) + c) % m
+
+def rotate_right_8bit(value):
+    """
+    Performs an 8-bit right rotation (ROTR) using matrix-vector multiplication.
+    """
+    if not (0 <= value <= 255):
+        raise ValueError("Value must be an 8-bit integer (0-255)")
+    
+    # Convert integer to 8-bit binary vector
+    x = np.array([(value >> i) & 1 for i in range(7, -1, -1)])
+    
+    # Rotation matrix for right rotate (ROTR)
+    M_rotR = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0, 0],
+        [1, 0, 0, 0, 0, 0, 1, 0]
+    ])
+    
+    # Perform matrix-vector multiplication
+    rotated_x = np.dot(M_rotR, x) % 2
+    
+    # Convert binary vector back to integer
+    rotated_value = sum(rotated_x[i] << (7 - i) for i in range(8))
+    return rotated_value
+
+
+def rotate_left_8bit(value):
+    """
+    Performs an 8-bit left rotation (ROTL) using matrix-vector multiplication.
+    """
+    if not (0 <= value <= 255):
+        raise ValueError("Value must be an 8-bit integer (0-255)")
+    
+    # Convert integer to 8-bit binary vector
+    x = np.array([(value >> i) & 1 for i in range(7, -1, -1)])
+    
+    # Rotation matrix for left rotate (ROTL)
+    M_rotL = np.array([
+        [0, 1, 0, 0, 0, 0, 0, 1],
+        [0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 0, 0]
+    ])
+    
+    # Perform matrix-vector multiplication
+    rotated_x = np.dot(M_rotL, x) % 2
+    
+    # Convert binary vector back to integer
+    rotated_value = sum(rotated_x[i] << (7 - i) for i in range(8))
+    return rotated_value
+
+def apply_xorshift_to_list(values, a, b, c):
+    """
+    Applies the 8-bit XORShift operation to a list of 8-bit integers.
+    """
+    xorShiftList = []
+    for x in range(1,a):
+        for i in values:
+            xorShiftList.append(rotate_left_8bit(values[i]))
+    for y in range(1,b):
+        for i in values:
+            xorShiftList[i] = rotate_right_8bit(xorShiftList[i])
+    for z in range(1,c):
+        for i in values:
+            xorShiftList[i] = rotate_left_8bit(xorShiftList[i])
+    
+    return xorShiftList
+
+
+def generate_randogram(randomNums):
+    if len(randomNums) % 2 != 0:
+        randomNums = randomNums[:-1]  # Ensure even count
+    
+    # Convert to coordinate pairs
+    points = [(randomNums[i], randomNums[i + 1]) for i in range(0, len(randomNums), 2)]
+    
+    # Count occurrences of each coordinate
+    point_counts = Counter(points)
+    
+    # Extract unique points and their intensities
+    x_vals, y_vals, intensities = [], [], []
+    for (x, y), count in point_counts.items():
+        x_vals.append(x)
+        y_vals.append(y)
+        intensities.append(1-(1/(count + 1)))  # Normalize intensities better
+    
+    # Convert to numpy array
+    intensities = np.array(intensities)
+    
+    # Plot the randogram
+    plt.figure(figsize=(8, 8))
+    plt.scatter(x_vals, y_vals, c=intensities, cmap='gray', edgecolor='none')
+    plt.colorbar(label='Intensity')
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+    plt.title('Randogram')
+    plt.show()
+
+def plot_distribution(data, bins=10, title='Distribution Graph'):
+    """Plots a distribution graph for a given list of values without using seaborn."""
+    plt.figure(figsize=(8, 5))
+    plt.hist(data, bins=bins, color='blue', alpha=0.6, edgecolor='black')
+    
+    # Density line
+    data_range = np.linspace(min(data), max(data), 1000)
+    plt.xlabel('Values')
+    plt.ylabel('Frequency')
+    plt.title(title)
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.show()
+    
+
+def integration(randomNums):
+    """Computes the total integral area for a list of numbers."""
+    integratedRandomNums = []
+    def func(x):
+        return abs(np.sin(x) + np.cos(4 * (x + 1/4)) - 0.5)  # Define the function to integrate
+    
+    for i in randomNums:
+        total_area = (integrate.quad(func, 0, randomNums[i])[0]) + randomNums[i]
+        integratedRandomNums.append(int(round(total_area)))
+    return(integratedRandomNums)
+
+def inverse_transform_sampling_normal(lambda_param, U):
+    """
+    Generates random samples from an exponential distribution using Inverse Transform Sampling.
+    
+    Parameters:
+    lambda_param (float): Rate parameter (λ) of the exponential distribution.
+    U (list or np.array): List of uniform random values in (0,1).
+    
+    Returns:
+    list: Random samples from Exp(λ).
+    """
+    
+    its = [0] * len(U)  # Initialize list with correct size
+    buffer = [u % 2 for u in U]  # Ensure buffer contains valid values
+
+    for c in range(len(U)):
+        if buffer[c] >= 1:  # Prevent log(0) error
+            buffer[c] = 0.999999  # Adjust value to avoid log(0)
+        its[c] = -np.log(1 - buffer[c]) / lambda_param  # Apply inverse CDF
+
+    return its  # Ensure the function returns a valid list
+    
+
+# Driver Code
+if __name__ == '__main__':
+     
+    # Seed value
+    Xo = 42
+     
+    # Modulus parameter
+    m = 256   
+     
+    # Multiplier term
+    a = 165
+        
+    # Increment term
+    c = 101
+ 
+    # Number of Random numbers
+    # to be generated
+    noOfRandomNums = 65000
+
+    # To store random numbers
+    randomNums = [0] * (noOfRandomNums)
+ 
+    # Function Call
+    linearCongruentialMethod(Xo, m, a, c,randomNums, noOfRandomNums)
+ 
+    # Print the generated random numbers
+    for i in randomNums:
+        print(i, end = " ")
+    
+    xorShiftRandomNums = apply_xorshift_to_list(randomNums,3,4,5)
+    print("XORShifted:", xorShiftRandomNums)
+
+    transformationNums = inverse_transform_sampling_normal(1,randomNums)
+
+    generate_randogram(randomNums)
+    plot_distribution(randomNums)
+
+    generate_randogram(xorShiftRandomNums)
+    plot_distribution(xorShiftRandomNums)
+    
+    generate_randogram(transformationNums)
+    plot_distribution(transformationNums)
+    print(transformationNums)
+
+
+    integratedRandomNums = apply_xorshift_to_list(randomNums,3,5,4)
+    integratedRandomNums = integration(integratedRandomNums)
+    generate_randogram(integratedRandomNums)
+    plot_distribution(integratedRandomNums)
+
